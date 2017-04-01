@@ -118,15 +118,23 @@
 		var targetImage = null
 		var targetImageWrap = null
 		var targetImageClone = null
+		var preload = null;
 
 		function zoomImage() {
-			var img = document.createElement('img')
-			img.onload = function () {
-				fullHeight = Number(img.height)
-				fullWidth = Number(img.width)
-				zoomOriginal()
+			fullWidth = targetImage.getAttribute('data-original-width');
+			fullHeight = targetImage.getAttribute('data-original-height');
+			zoomOriginal();
+
+			preload = document.createElement('img')
+			preload.onload = function () {
+				targetImage.setAttribute('sizes', targetImage.getAttribute('data-original-sizes'));
+				targetImage.setAttribute('srcset', targetImage.getAttribute('data-original-srcset'));
+				targetImage.src = targetImage.getAttribute('data-original');
 			}
-			img.src = targetImage.currentSrc || targetImage.src
+
+			preload.setAttribute('sizes', targetImage.getAttribute('data-original-sizes'));
+			preload.setAttribute('srcset', targetImage.getAttribute('data-original-srcset'));
+			preload.src = targetImage.getAttribute('data-original');
 		}
 
 		function zoomOriginal() {
@@ -137,10 +145,13 @@
 			targetImageWrap.style.left = offset(targetImage).left + 'px'
 
 			targetImageClone = targetImage.cloneNode()
-			targetImageClone.style.visibility = 'hidden'
 
 			targetImage.style.width = targetImage.offsetWidth + 'px'
 			targetImage.parentNode.replaceChild(targetImageClone, targetImage)
+
+			setTimeout(function() {
+
+			targetImageClone.style.visibility = 'hidden'
 
 			document.body.appendChild(targetImageWrap)
 			targetImageWrap.appendChild(targetImage)
@@ -155,6 +166,8 @@
 
 			calculateZoom()
 			triggerAnimation()
+
+			}, 0) // fix for firefox repaint bug at bottom of page
 		}
 
 		function calculateZoom() {
@@ -211,6 +224,7 @@
 		}
 
 		function close() {
+			preload.onload = function() {}
 			document.body.classList.remove('zoom-overlay-open')
 			document.body.classList.add('zoom-overlay-transitioning')
 
@@ -238,11 +252,14 @@
 			targetImage.style.width = ''
 			targetImage.setAttribute('data-action', 'zoom')
 
-			targetImageClone.parentNode.replaceChild(targetImage, targetImageClone)
+			targetImageClone.style.visibility = 'visible';
+			targetImage.parentNode.removeChild(targetImage)
 			targetImageWrap.parentNode.removeChild(targetImageWrap)
 			overlay.parentNode.removeChild(overlay)
 
 			document.body.classList.remove('zoom-overlay-transitioning')
+
+			targetImage = targetImageClone;
 		}
 
 		return function (target) {
@@ -252,4 +269,4 @@
 	}())
 
 	zoomListener().listen()
-}()
+}();
